@@ -27,6 +27,7 @@ namespace Noob_Wireless_Share {
         long lastupload = 0;
         long lastdownload = 0;
         int connection = 0;
+        bool initializing = false;
         ToolTip tooltip = new ToolTip();
 
         public Form1() {
@@ -84,7 +85,7 @@ namespace Noob_Wireless_Share {
                                 break;
                             case "已啟動":
                                 if(stat != stateSharing.STATESHARING_SHARING) toggle(true);
-                                updateStatus(connection != 0 ? connection + "人正在使用網路" : "沒有人正在使用網路");
+                                if (!initializing) updateStatus(connection != 0 ? connection + "人正在使用網路" : "沒有人正在使用網路");
                                 stat = stateSharing.STATESHARING_SHARING;
                                 break;
                             case "無法使用":
@@ -220,6 +221,7 @@ namespace Noob_Wireless_Share {
         }
 
         private void setNICShare() {
+            initializing = true;
             updateStatus("正在設定網路介面卡...(1/4)");
             short countError = 0;
             short isFind = 1;
@@ -230,6 +232,8 @@ namespace Noob_Wireless_Share {
             } else if ((nicSelected = findNicByName(Preference.ShareNetwork)) == null) {
                 nicSelected = nicBest;
             }
+
+            initNIC();
 
             NETCONLib.NetSharingManager nsm = new NETCONLib.NetSharingManager();
             foreach (NETCONLib.INetConnection con in nsm.EnumEveryConnection) {
@@ -273,7 +277,6 @@ namespace Noob_Wireless_Share {
                                         nicShare = nic;
                                         break;
                                     }
-
                                 }
                                 interfaces = null;
                             }
@@ -285,6 +288,7 @@ namespace Noob_Wireless_Share {
                     }
                     if (countError == 3) {
                         updateStatus("✗ 發生不明錯誤");
+                        sharing(false);
                         return;
                     }
                 }
@@ -295,8 +299,10 @@ namespace Noob_Wireless_Share {
             if (nicShare != null) name = nicShare.Name;
             cmd.StandardInput.WriteLine("netsh interface ip set address name=\"" + name + "\" static " + Preference.ServerIP + " 255.255.255.0");
             //cmd.StandardInput.WriteLine("netsh interface ip set address name=\"" + name + "\" dhcp");
+            initializing = false;
             cmd.StandardInput.WriteLine("exit");
             cmd.WaitForExit(700);
+            
         }
 
         private void sharing(Boolean foo) {
